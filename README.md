@@ -15,7 +15,8 @@ To build the application, you'll have the Developer tools for Mac OS
 X installed.
 
 When you have, you first build the application:
-    python setup.py py2app
+
+	python setup.py py2app
 
 This builds the application as `dist/ToggleProxy.app`. You can run it from
 there, or move it to somewhere more appropriate first.
