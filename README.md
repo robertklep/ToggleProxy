@@ -23,7 +23,7 @@ there, or move it to somewhere more appropriate first.
 
 [pyobjc]: http://pyobjc.sourceforge.net/
 
-## NB
+## Troubleshooting
 
 On Mac OS X Lion, you might get errors running the application. If that
 happens, first try to find out what the reason is. Run this from the same
@@ -31,8 +31,8 @@ directory as `setup.py`:
 
 	./dist/ToggleProxy.app/Contents/MacOS/ToggleProxy
 
-If you're getting errors about frameworks not found, you might have to
-install a different version of the `py2app` module. I'm using [this
+If you're getting errors about frameworks not being found, you might have
+to install a different version of the `py2app` module. I'm using [this
 one][py2app].
 
 [py2app]: https://bitbucket.org/ronaldoussoren/py2app
