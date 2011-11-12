@@ -12,7 +12,7 @@ class ToggleProxy(NSObject):
         self.active_color   = NSColor.colorWithSRGBRed_green_blue_alpha_(0, 0.5, 0, 1)
         self.inactive_color = NSColor.colorWithSRGBRed_green_blue_alpha_(0.6, 0, 0, 1)
         self.title_font     = NSFont.fontWithName_size_('HelveticaNeue-Bold', 12.0)
-        
+
         # find image files
         self.active_image   = NSImage.imageNamed_("active")
         self.inactive_image = NSImage.imageNamed_("inactive")
@@ -25,50 +25,58 @@ class ToggleProxy(NSObject):
         self.statusitem.setHighlightMode_(False)
         self.statusitem.setEnabled_(True)
 
+        # open connection to the dynamic (configuration) store
+        self.store = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.dynamicStoreCallback, None)
+
         # start working
         self.loadNetworkServices()
         self.watchForProxyChanges()
         self.updateProxyStatus()
 
+    @property
+    def interface(self):
+        # get primary interface
+        return SCDynamicStoreCopyValue(self.store, 'State:/Network/Global/IPv4')['PrimaryInterface']
+
     def loadNetworkServices(self):
-        """ load list of network services, the easy way """
-        self.services   = {}
-        output          = commands.getoutput("/usr/sbin/networksetup listnetworkserviceorder")
-        for service, device in re.findall(r'Hardware Port:\s*(.*?), Device:\s*(.*?)\)', output):
-            self.services[device] = service
+        """ load list of network services """
+        self.services = {}
+        for key, dictionary in SCDynamicStoreCopyMultiple(self.store, None, [ 'Setup:/Network/Service/.*/Interface' ]).items():
+            self.services[dictionary['DeviceName']] = dictionary['UserDefinedName']
 
     def watchForProxyChanges(self):
         """ install a watcher for proxy changes """
-        store   = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.proxyStateChanged, None)
-        SCDynamicStoreSetNotificationKeys(store, None, [ 'State:/Network/Global/Proxies' ])
+        SCDynamicStoreSetNotificationKeys(self.store, None, [ 'State:/Network/Global/Proxies' ])
 
-        source  = SCDynamicStoreCreateRunLoopSource(None, store, 0)
+        source  = SCDynamicStoreCreateRunLoopSource(None, self.store, 0)
         loop    = NSRunLoop.currentRunLoop().getCFRunLoop()
         CFRunLoopAddSource(loop, source, kCFRunLoopCommonModes)
 
-    def proxyStateChanged(self, store, keys, info):
+    def dynamicStoreCallback(self, store, keys, info):
         """ callback for watcher """
         self.updateProxyStatus()
 
     def updateProxyStatus(self):
         """ update proxy status """
-        proxydict   = SCDynamicStoreCopyProxies(None)
-        interface   = proxydict['__SCOPED__'].keys()[0]
-        status      = proxydict['__SCOPED__'][interface]
-        self.active = status.get('HTTPEnable', False) and True or False
-        self.device = interface
+        # load proxy dictionary
+        proxydict       = SCDynamicStoreCopyProxies(None)
 
-        # set image 
+        # get status for primary interface
+        status          = proxydict['__SCOPED__'][self.interface]
+        self.active     = status.get('HTTPEnable', False) and True or False
+
+        # set image
         self.statusitem.setImage_( self.active and self.active_image or self.inactive_image )
 
         # set tooltip
         if self.active:
-            tooltip = "Proxy active on %s:%s" % (
+            tooltip = "[%s] proxy active on %s:%s" % (
+                self.interface,
                 proxydict.get('HTTPProxy',  '??'),
-                proxydict.get('HTTPPort',   '??')
+                proxydict.get('HTTPPort',   '??'),
             )
         else:
-            tooltip = "Proxy is not active"
+            tooltip = "[%s] proxy not active" % self.interface
         self.statusitem.setToolTip_(tooltip)
 
     def toggleProxy_(self, sender):
@@ -80,9 +88,9 @@ class ToggleProxy(NSObject):
             NSApp.terminate_(self)
             return
 
-        servicename = self.services.get(self.device)
+        servicename = self.services.get(self.interface)
         if not servicename:
-            NSLog("device '%s' not found in services?" % self.device)
+            NSLog("interface '%s' not found in services?" % self.interface)
             return
         newstate = self.active and "off" or "on"
         commands.getoutput("networksetup setwebproxystate %s %s" % (
