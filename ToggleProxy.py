@@ -5,7 +5,7 @@ from    AppKit              import *
 from    SystemConfiguration import *
 import  commands, re, time
 
-class ProxySwitcher(NSObject):
+class ToggleProxy(NSObject):
 
     def applicationDidFinishLaunching_(self, notification):
         # make status bar item
@@ -33,7 +33,7 @@ class ProxySwitcher(NSObject):
             self.services[device] = service
 
     def watchForProxyChanges(self):
-        store   = SCDynamicStoreCreate(None, "name.klep.proxyswitcher", self.proxyStateChanged, None)
+        store   = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.proxyStateChanged, None)
         SCDynamicStoreSetNotificationKeys(store, None, [ 'State:/Network/Global/Proxies' ])
 
         source  = SCDynamicStoreCreateRunLoopSource(None, store, 0)
@@ -80,6 +80,6 @@ class ProxySwitcher(NSObject):
 
 if __name__ == '__main__':
     sharedapp   = NSApplication.sharedApplication()
-    switcher    = ProxySwitcher.alloc().init()
-    sharedapp.setDelegate_(switcher)
+    toggler     = ToggleProxy.alloc().init()
+    sharedapp.setDelegate_(toggler)
     sharedapp.run()
