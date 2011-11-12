@@ -4,10 +4,13 @@ _ToggleProxy_ is a [PyObjC][pyobjc]-based application for Mac OS X to
 quickly enable and disable the HTTP proxy for the currently active
 networking interface.
 
-It's a _headless_ application which installs a menu item in the Mac OS
+It's a background application which installs a menu item in the Mac OS
 X menu bar. The item shows either an up-arrow with a dashed line through it
 (think _traffic is going through a proxy_) when the proxy is active, and
 only an up-arrow when the proxy is not active.
+
+Toggle the on/off state by clicking the icon, quit the application by
+`Ctrl`-clicking the icon.
 
 ## Build
 
