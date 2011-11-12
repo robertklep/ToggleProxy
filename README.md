@@ -19,3 +19,5 @@ When you have, you first build the application:
 
 This builds the application as `dist/ToggleProxy.app`. You can run it from
 there, or move it to somewhere more appropriate first.
+
+[pyobjc]: http://pyobjc.sourceforge.net/
