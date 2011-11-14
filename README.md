@@ -12,12 +12,18 @@ only an up-arrow when the proxy is not active.
 Toggle the on/off state by clicking the icon, quit the application by
 `Ctrl`-clicking the icon.
 
+## Prerequisites
+
+* PyObjC: this should be already installed on your Mac, possible after
+	installing [XCode][xcode] first;
+* [py2app][py2app]
+
+[xcode]: http://itunes.apple.com/us/app/xcode/id448457090?mt=12
+[py2app]: https://bitbucket.org/ronaldoussoren/py2app
+
 ## Build
 
-To build the application, you'll have the Developer tools for Mac OS
-X installed.
-
-When you have, you first build the application:
+Build the application from Terminal like so:
 
 	python setup.py py2app
 
@@ -28,14 +34,35 @@ there, or move it to somewhere more appropriate first.
 
 ## Troubleshooting
 
-On Mac OS X Lion, you might get errors running the application. If that
-happens, first try to find out what the reason is. Run this from the same
-directory as `setup.py`:
+If you run into problems, first try to find out what the reason is. Run
+this from the same directory as `setup.py`:
 
 	./dist/ToggleProxy.app/Contents/MacOS/ToggleProxy
 
-If you're getting errors about frameworks not being found, you might have
-to install a different version of the `py2app` module. I'm using [this
-one][py2app].
+This should output any errors to stdout, so you might get a clue as to why
+it's not working. If it warrants an issue-report, you're welcome!
 
-[py2app]: https://bitbucket.org/ronaldoussoren/py2app
+## Author & License
+
+Copyright (C) 2011 by Robert Klep (_robert AT klep DOT name_).
+
+    Permission is hereby granted, free of charge, to any person
+    obtaining a copy of this software and associated documentation
+    files (the "Software"), to deal in the Software without
+    restriction, including without limitation the rights to use,
+    copy, modify, merge, publish, distribute, sublicense, and/or
+    sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following
+    conditions:
+    
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+    OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+    HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
