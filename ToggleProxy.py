@@ -8,11 +8,6 @@ import  commands, re, time
 class ToggleProxy(NSObject):
 
     def applicationDidFinishLaunching_(self, notification):
-        # define some title-related stuff
-        self.active_color   = NSColor.colorWithSRGBRed_green_blue_alpha_(0, 0.5, 0, 1)
-        self.inactive_color = NSColor.colorWithSRGBRed_green_blue_alpha_(0.6, 0, 0, 1)
-        self.title_font     = NSFont.fontWithName_size_('HelveticaNeue-Bold', 12.0)
-
         # find image files
         self.active_image   = NSImage.imageNamed_("active")
         self.inactive_image = NSImage.imageNamed_("inactive")
