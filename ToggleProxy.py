@@ -35,9 +35,10 @@ class ToggleProxy(NSObject):
 
     def loadNetworkServices(self):
         """ load list of network services """
-        self.services = {}
-        for key, dictionary in SCDynamicStoreCopyMultiple(self.store, None, [ 'Setup:/Network/Service/.*/Interface' ]).items():
-            self.services[dictionary['DeviceName']] = dictionary['UserDefinedName']
+        self.services   = {}
+        output          = commands.getoutput("/usr/sbin/networksetup listnetworkserviceorder")
+        for service, device in re.findall(r'Hardware Port:\s*(.*?), Device:\s*(.*?)\)', output):
+            self.services[device] = service
 
     def watchForProxyChanges(self):
         """ install a watcher for proxy changes """
@@ -76,10 +77,8 @@ class ToggleProxy(NSObject):
 
     def toggleProxy_(self, sender):
         """ callback for clicks on menu item """
-        event = NSApp.currentEvent()
-
         # Ctrl pressed? if so, quit
-        if event.modifierFlags() & NSControlKeyMask:
+        if NSApp.currentEvent().modifierFlags() & NSControlKeyMask:
             NSApp.terminate_(self)
             return
 
@@ -88,7 +87,7 @@ class ToggleProxy(NSObject):
             NSLog("interface '%s' not found in services?" % self.interface)
             return
         newstate = self.active and "off" or "on"
-        commands.getoutput("networksetup setwebproxystate %s %s" % (
+        commands.getoutput("/usr/sbin/networksetup setwebproxystate %s %s" % (
             servicename,
             newstate
         ))

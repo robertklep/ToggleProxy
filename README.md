@@ -12,6 +12,9 @@ only an up-arrow when the proxy is not active.
 Toggle the on/off state by clicking the icon, quit the application by
 `Ctrl`-clicking the icon.
 
+*NB*: this is not a proxy manager, you have to configure proxies from Mac
+OS X Network preferences first before this app makes any sense.
+
 ## Prerequisites
 
 * PyObjC: this should be already installed on your Mac, possible after
@@ -40,7 +43,7 @@ this from the same directory as `setup.py`:
 	./dist/ToggleProxy.app/Contents/MacOS/ToggleProxy
 
 This should output any errors to stdout, so you might get a clue as to why
-it's not working. If it warrants an issue-report, you're welcome!
+it's not working. If it warrants an issue report, you're welcome!
 
 ## Author & License
 
