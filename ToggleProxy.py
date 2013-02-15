@@ -8,17 +8,23 @@ import  commands, re
 class ToggleProxy(NSObject):
 
     def applicationDidFinishLaunching_(self, notification):
-        # find image files
-        self.active_image   = NSImage.imageNamed_("active")
-        self.inactive_image = NSImage.imageNamed_("inactive")
+        # load icon files
+        self.icons = {
+            '0-0-0' : NSImage.imageNamed_("icon-0-0-0"),
+            '1-0-0' : NSImage.imageNamed_("icon-1-0-0"),
+            '0-1-0' : NSImage.imageNamed_("icon-0-1-0"),
+            '0-0-1' : NSImage.imageNamed_("icon-0-0-1"),
+            '1-1-0' : NSImage.imageNamed_("icon-1-1-0"),
+            '1-0-1' : NSImage.imageNamed_("icon-1-0-1"),
+            '1-1-1' : NSImage.imageNamed_("icon-1-1-1")
+        }
 
         # make status bar item
         self.statusitem = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
         self.statusitem.retain()
-#        self.statusitem.setTarget_(self)
         self.statusitem.setHighlightMode_(False)
         self.statusitem.setEnabled_(True)
-        self.statusitem.setImage_(self.inactive_image)
+        self.statusitem.setImage_(self.icons['0-0-0'])
 
         # insert a menu into the status bar item
         self.menu = NSMenu.alloc().init()
@@ -87,6 +93,15 @@ class ToggleProxy(NSObject):
         self.httpMenuItem.setState_(  status.get('HTTPEnable', False)  and NSOnState or NSOffState )
         self.httpsMenuItem.setState_( status.get('HTTPSEnable', False) and NSOnState or NSOffState )
         self.socksMenuItem.setState_( status.get('SOCKSEnable', False) and NSOnState or NSOffState )
+
+        # update icon
+        self.statusitem.setImage_(
+            self.icons['%d-%d-%d' % (
+                status.get('HTTPEnable', False)  and 1 or 0,
+                status.get('HTTPSEnable', False) and 1 or 0,
+                status.get('SOCKSEnable', False) and 1 or 0
+            )]
+        )
 
     def quitApp_(self, sender):
         NSApp.terminate_(self)
