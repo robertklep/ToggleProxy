@@ -3,7 +3,7 @@
 from    Foundation          import *
 from    AppKit              import *
 from    SystemConfiguration import *
-import  commands, re, time
+import  commands, re
 
 class ToggleProxy(NSObject):
 
@@ -15,10 +15,33 @@ class ToggleProxy(NSObject):
         # make status bar item
         self.statusitem = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
         self.statusitem.retain()
-        self.statusitem.setAction_("toggleProxy:")
-        self.statusitem.setTarget_(self)
+#        self.statusitem.setTarget_(self)
         self.statusitem.setHighlightMode_(False)
         self.statusitem.setEnabled_(True)
+        self.statusitem.setImage_(self.inactive_image)
+
+        # insert a menu into the status bar item
+        self.menu = NSMenu.alloc().init()
+        self.statusitem.setMenu_(self.menu)
+
+        # add items to menu
+        self.httpMenuItem = self.menu.addItemWithTitle_action_keyEquivalent_(
+            "HTTP proxy",
+            "toggleHttpProxy:",
+            "")
+        self.httpsMenuItem = self.menu.addItemWithTitle_action_keyEquivalent_(
+            "HTTPS proxy",
+            "toggleHttpsProxy:",
+            "")
+        self.socksMenuItem = self.menu.addItemWithTitle_action_keyEquivalent_(
+            "SOCKS proxy",
+            "toggleSocksProxy:",
+            "")
+        self.menu.addItem_(NSMenuItem.separatorItem())
+        self.menu.addItemWithTitle_action_keyEquivalent_(
+            "Quit",
+            "quitApp:",
+            "")
 
         # open connection to the dynamic (configuration) store
         self.store = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.dynamicStoreCallback, None)
@@ -37,8 +60,8 @@ class ToggleProxy(NSObject):
         """ load list of network services """
         self.services   = {}
         output          = commands.getoutput("/usr/sbin/networksetup listnetworkserviceorder")
-        for service, device in re.findall(r'Hardware Port:\s*(.*?), Device:\s*(.*?)\)', output):
-            self.services[device] = service
+        for servicename, service, device in re.findall(r'\(\d\)\s*(.*?)(?:\n|\r\n?)\(Hardware Port:\s*(.*?), Device:\s*(.*?)\)', output, re.MULTILINE):
+            self.services[device] = servicename
 
     def watchForProxyChanges(self):
         """ install a watcher for proxy changes """
@@ -59,35 +82,33 @@ class ToggleProxy(NSObject):
 
         # get status for primary interface
         status          = proxydict['__SCOPED__'][self.interface]
-        self.active     = status.get('HTTPEnable', False) and True or False
 
-        # set image
-        self.statusitem.setImage_( self.active and self.active_image or self.inactive_image )
+        # update menu items according to their related proxy state
+        self.httpMenuItem.setState_(  status.get('HTTPEnable', False)  and NSOnState or NSOffState )
+        self.httpsMenuItem.setState_( status.get('HTTPSEnable', False) and NSOnState or NSOffState )
+        self.socksMenuItem.setState_( status.get('SOCKSEnable', False) and NSOnState or NSOffState )
 
-        # set tooltip
-        if self.active:
-            tooltip = "[%s] proxy active on %s:%s" % (
-                self.interface,
-                proxydict.get('HTTPProxy',  '??'),
-                proxydict.get('HTTPPort',   '??'),
-            )
-        else:
-            tooltip = "[%s] proxy not active" % self.interface
-        self.statusitem.setToolTip_(tooltip)
+    def quitApp_(self, sender):
+        NSApp.terminate_(self)
 
-    def toggleProxy_(self, sender):
+    def toggleHttpProxy_(self, sender):
+        self.toggleProxy(self.httpMenuItem, 'webproxy')
+
+    def toggleHttpsProxy_(self, sender):
+        self.toggleProxy(self.httpsMenuItem, 'securewebproxy')
+
+    def toggleSocksProxy_(self, sender):
+        self.toggleProxy(self.socksMenuItem, 'socksfirewallproxy')
+
+    def toggleProxy(self, item, target):
         """ callback for clicks on menu item """
-        # Ctrl pressed? if so, quit
-        if NSApp.currentEvent().modifierFlags() & NSControlKeyMask:
-            NSApp.terminate_(self)
-            return
-
         servicename = self.services.get(self.interface)
         if not servicename:
             NSLog("interface '%s' not found in services?" % self.interface)
             return
-        newstate = self.active and "off" or "on"
-        commands.getoutput("/usr/sbin/networksetup setwebproxystate %s %s" % (
+        newstate = item.state() == NSOffState and 'on' or 'off'
+        commands.getoutput("/usr/sbin/networksetup -set%sstate '%s' %s" % (
+            target,
             servicename,
             newstate
         ))
