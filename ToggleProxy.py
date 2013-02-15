@@ -65,8 +65,9 @@ class ToggleProxy(NSObject):
     def loadNetworkServices(self):
         """ load list of network services """
         self.services   = {}
-        output          = commands.getoutput("/usr/sbin/networksetup listnetworkserviceorder")
-        for servicename, service, device in re.findall(r'\(\d\)\s*(.*?)(?:\n|\r\n?)\(Hardware Port:\s*(.*?), Device:\s*(.*?)\)', output, re.MULTILINE):
+        for interface in SCNetworkInterfaceCopyAll():
+            device      = SCNetworkInterfaceGetBSDName(interface)
+            servicename = SCNetworkInterfaceGetLocalizedDisplayName(interface)
             self.services[device] = servicename
 
     def watchForProxyChanges(self):
