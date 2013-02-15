@@ -63,12 +63,19 @@ class ToggleProxy(NSObject):
         return SCDynamicStoreCopyValue(self.store, 'State:/Network/Global/IPv4')['PrimaryInterface']
 
     def loadNetworkServices(self):
-        """ load list of network services """
+        """ Load and store a list of network services indexed by their BSDName """
         self.services   = {}
-        for interface in SCNetworkInterfaceCopyAll():
-            device      = SCNetworkInterfaceGetBSDName(interface)
-            servicename = SCNetworkInterfaceGetLocalizedDisplayName(interface)
-            self.services[device] = servicename
+        # Create a dummy preference reference
+        prefs = SCPreferencesCreate(kCFAllocatorDefault, 'PRG', None)
+        # Fetch the list of services
+        for service in SCNetworkServiceCopyAll(prefs):
+            # This is what we're after, the user-defined service name e.g., "Built-in Ethernet"
+            name      = SCNetworkServiceGetName(service)
+            # Interface reference
+            interface = SCNetworkServiceGetInterface(service)
+            # The BSDName of the interface, E.g., "en1", this will be the index of our list
+            bsdname   = SCNetworkInterfaceGetBSDName(interface)
+            self.services[bsdname] = name
 
     def watchForProxyChanges(self):
         """ install a watcher for proxy changes """
