@@ -3,37 +3,37 @@
 from    Foundation          import *
 from    AppKit              import *
 from    SystemConfiguration import *
-# from    pprint              import pprint
 import  commands, re
 
 class ToggleProxy(NSObject):
+
+    # This is a dictionary of the proxy-types we support, each with a
+    # dictionary of some unique attributes for each, namely:
+    #
+    #   'pref'          : This is a constant defining which preference itemmarks if this proxy is enabled
+    #   'title'         : This is what will appear in the menu
+    #   'action'        : This is the method that will be called if the user toggles this proxies menuitem
+    #   'keyEquivalent' : Self-explanatory, but unused
+    #   'menuitem'      : This will store the menu item for this proxy once it is created
 
     proxies = {
         'ftp'  : { 'pref': kSCPropNetProxiesFTPEnable,   'title': 'FTP Proxy',   'action': 'toggleFtpProxy:',   'keyEquivalent': "", 'menuitem': None },
         'http' : { 'pref': kSCPropNetProxiesHTTPEnable,  'title': 'HTTP Proxy',  'action': 'toggleHttpProxy:',  'keyEquivalent': "", 'menuitem': None },
         'https': { 'pref': kSCPropNetProxiesHTTPSEnable, 'title': 'HTTPS Proxy', 'action': 'toggleHttpsProxy:', 'keyEquivalent': "", 'menuitem': None },
-        'rtsp':  { 'pref': kSCPropNetProxiesRTSPEnable,  'title': 'RTSP Proxy',  'action': 'toggleRtspProxy:',  'keyEquivalent': "", 'menuitem': None },
+        'rtsp' : { 'pref': kSCPropNetProxiesRTSPEnable,  'title': 'RTSP Proxy',  'action': 'toggleRtspProxy:',  'keyEquivalent': "", 'menuitem': None },
         'socks': { 'pref': kSCPropNetProxiesSOCKSEnable, 'title': 'SOCKS Proxy', 'action': 'toggleSocksProxy:', 'keyEquivalent': "", 'menuitem': None },
     }
 
     def applicationDidFinishLaunching_(self, notification):
         # load icon files
-        self.icons = {
-            '0-0-0' : NSImage.imageNamed_("icon-0-0-0"),
-            '1-0-0' : NSImage.imageNamed_("icon-1-0-0"),
-            '0-1-0' : NSImage.imageNamed_("icon-0-1-0"),
-            '0-0-1' : NSImage.imageNamed_("icon-0-0-1"),
-            '1-1-0' : NSImage.imageNamed_("icon-1-1-0"),
-            '1-0-1' : NSImage.imageNamed_("icon-1-0-1"),
-            '1-1-1' : NSImage.imageNamed_("icon-1-1-1")
-        }
+        self.active_image   = NSImage.imageNamed_("active")
+        self.inactive_image = NSImage.imageNamed_("inactive")
 
         # make status bar item
         self.statusitem = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
         self.statusitem.retain()
         self.statusitem.setHighlightMode_(False)
         self.statusitem.setEnabled_(True)
-        self.statusitem.setImage_(self.icons['0-0-0'])
 
         # insert a menu into the status bar item
         self.menu = NSMenu.alloc().init()
@@ -42,13 +42,14 @@ class ToggleProxy(NSObject):
         # open connection to the dynamic (configuration) store
         self.store = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.dynamicStoreCallback, None)
 
-        service = self.service
-
-        proxyRef = SCNetworkServiceCopyProtocol(service, kSCNetworkProtocolTypeProxies)
+        proxyRef = SCNetworkServiceCopyProtocol(self.service, kSCNetworkProtocolTypeProxies)
         prefDict = SCNetworkProtocolGetConfiguration(proxyRef)
-        # pprint(prefDict)
 
         separatorRequired = False
+
+        # For each of the proxies we are concerned with, check to see if any
+        # are configured. If so (even if not enabled), create a menuitem for
+        # that proxy type.
 
         for proxy in self.proxies.values():
             enabled = CFDictionaryGetValue(prefDict, proxy['pref'])
@@ -60,21 +61,16 @@ class ToggleProxy(NSObject):
                 )
                 separatorRequired = True
             else:
-                # NSLog("%s does not appear to be configured" % proxy['title'])
                 proxy['menuitem'] = None
-
-        # pprint(self.proxies)
 
         if separatorRequired:
             self.menu.addItem_(NSMenuItem.separatorItem())
 
-        self.menu.addItemWithTitle_action_keyEquivalent_(
-            "Quit",
-            "quitApp:",
-            "")
+        # Need a way to quit
+        self.menu.addItemWithTitle_action_keyEquivalent_("Quit", "quitApp:", "")
 
-        # start working
-        self.loadNetworkServices()
+        # Start working
+        # self.loadNetworkServices()
         self.watchForProxyChanges()
         self.updateProxyStatus()
 
@@ -91,25 +87,9 @@ class ToggleProxy(NSObject):
         # Fetch the list of services
         for serviceRef in SCNetworkServiceCopyAll(prefs):
             interface = SCNetworkServiceGetInterface(serviceRef)
-            bsdname   = SCNetworkInterfaceGetBSDName(interface)
-            if self.interface == bsdname:
+            if self.interface == SCNetworkInterfaceGetBSDName(interface):
                 return serviceRef
         return None
-
-    def loadNetworkServices(self):
-        """ Load and store a list of network services indexed by their BSDName """
-        self.services   = {}
-        # Create a dummy preference reference
-        prefs = SCPreferencesCreate(kCFAllocatorDefault, 'PRG', None)
-        # Fetch the list of services
-        for service in SCNetworkServiceCopyAll(prefs):
-            # This is what we're after, the user-defined service name e.g., "Built-in Ethernet"
-            name      = SCNetworkServiceGetName(service)
-            # Interface reference
-            interface = SCNetworkServiceGetInterface(service)
-            # The BSDName of the interface, E.g., "en1", this will be the index of our list
-            bsdname   = SCNetworkInterfaceGetBSDName(interface)
-            self.services[bsdname] = name
 
     def watchForProxyChanges(self):
         """ install a watcher for proxy changes """
@@ -131,19 +111,18 @@ class ToggleProxy(NSObject):
         # get status for primary interface
         status    = proxydict['__SCOPED__'][self.interface]
 
+        # Are any proxies active now?
+        anyProxyEnabled = False
+
         # update menu items according to their related proxy state
         for proxy in self.proxies.values():
             if proxy['menuitem']:
-                proxy['menuitem'].setState_( status.get(proxy['pref'], False) and NSOnState or NSOffState)
+                proxy['menuitem'].setState_(status.get(proxy['pref'], False) and NSOnState or NSOffState)
+                if status.get(proxy['pref'], False):
+                    anyProxyEnabled = True
 
-        # update icon
-        self.statusitem.setImage_(
-            self.icons['%d-%d-%d' % (
-                status.get(self.proxies['http']['pref'],  False) and 1 or 0,
-                status.get(self.proxies['https']['pref'], False) and 1 or 0,
-                status.get(self.proxies['socks']['pref'], False) and 1 or 0
-            )]
-        )
+        # set image
+        self.statusitem.setImage_(anyProxyEnabled and self.active_image or self.inactive_image)
 
     def quitApp_(self, sender):
         NSApp.terminate_(self)
@@ -165,7 +144,7 @@ class ToggleProxy(NSObject):
 
     def toggleProxy(self, item, target):
         """ callback for clicks on menu item """
-        servicename = self.services.get(self.interface)
+        servicename = SCNetworkServiceGetName(self.service)
         if not servicename:
             NSLog("interface '%s' not found in services?" % self.interface)
             return
