@@ -4,16 +4,16 @@ _ToggleProxy_ is a [PyObjC][pyobjc]-based application for Mac OS X to
 quickly enable and disable the different types of proxy (HTTP, HTTPS,
 SOCKS) for the currently active networking interface.
 
-It's a background application which installs a menu item in the Mac OS
-X menu bar, visualized by an arrow icon with three dots vertically laid
-out. These dots represent, from top to bottom, the state of the HTTP,
-HTTPS and SOCKS proxies: black is active, transparent is inactive.
-
-Clicking the icon presents a menu where the state of each type of proxy
-can be toggled.
+Clicking the icon (an upward arrow, shown in the Mac OS X menu bar)
+presents a menu where the state of each type of proxy can be toggled.
 
 *NB*: this is not a proxy manager, you have to configure proxies from Mac
 OS X Network preferences first before this app makes any sense.
+
+## Download
+
+You can download a pre-built version from
+[https://github.com/robertklep/ToggleProxy/releases](the Releases page).
 
 ## Prerequisites
 
