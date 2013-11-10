@@ -13,7 +13,7 @@ OS X Network preferences first before this app makes any sense.
 ## Download
 
 You can download a pre-built version from
-[https://github.com/robertklep/ToggleProxy/releases](the Releases page).
+[the Releases page](https://github.com/robertklep/ToggleProxy/releases).
 
 ## Prerequisites
 
