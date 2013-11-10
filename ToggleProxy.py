@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-from    Foundation          import *
-from    AppKit              import *
-from    SystemConfiguration import *
+from    Foundation          import NSLog, kCFRunLoopCommonModes, kCFAllocatorDefault, CFDictionaryGetValue, CFRunLoopAddSource
+from    AppKit              import NSObject, NSImage, NSStatusBar, NSVariableStatusItemLength, NSMenu, NSMenuItem, NSRunLoop, NSOnState, NSApp, NSLog, NSOffState, NSApplication
+from    SystemConfiguration import kSCNetworkProtocolTypeProxies, kSCPropNetProxiesFTPEnable, kSCPropNetProxiesHTTPEnable, kSCPropNetProxiesHTTPSEnable, kSCPropNetProxiesRTSPEnable, kSCPropNetProxiesSOCKSEnable, kSCNetworkProtocolTypeProxies
+from    SystemConfiguration import SCDynamicStoreCreate, SCNetworkServiceCopyProtocol, SCNetworkProtocolGetConfiguration, SCDynamicStoreCopyValue, SCPreferencesCreate, SCNetworkServiceCopyAll, SCNetworkServiceGetInterface, SCNetworkInterfaceGetBSDName, SCDynamicStoreSetNotificationKeys, SCDynamicStoreCreateRunLoopSource, SCDynamicStoreCopyProxies, SCNetworkServiceGetName
 import  commands, re
 
 class ToggleProxy(NSObject):
