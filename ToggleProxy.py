@@ -138,7 +138,7 @@ class ToggleProxy(NSObject):
         self.toggleProxy(self.proxies['https']['menuitem'], 'securewebproxy')
 
     def toggleRtspProxy_(self, sender):
-        self.toggleProxy(self.proxies['socks']['menuitem'], 'streamingproxy')
+        self.toggleProxy(self.proxies['rtsp']['menuitem'], 'streamingproxy')
 
     def toggleSocksProxy_(self, sender):
         self.toggleProxy(self.proxies['socks']['menuitem'], 'socksfirewallproxy')
