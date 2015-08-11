@@ -1,34 +1,76 @@
 #!/usr/bin/env python
 
-from    Foundation          import NSLog, kCFRunLoopCommonModes, kCFAllocatorDefault, CFDictionaryGetValue, CFRunLoopAddSource
-from    AppKit              import NSObject, NSImage, NSStatusBar, NSVariableStatusItemLength, NSMenu, NSMenuItem, NSRunLoop, NSOnState, NSApp, NSLog, NSOffState, NSApplication
-from    SystemConfiguration import kSCNetworkProtocolTypeProxies, kSCPropNetProxiesFTPEnable, kSCPropNetProxiesHTTPEnable, kSCPropNetProxiesHTTPSEnable, kSCPropNetProxiesRTSPEnable, kSCPropNetProxiesSOCKSEnable, kSCNetworkProtocolTypeProxies
-from    SystemConfiguration import SCDynamicStoreCreate, SCNetworkServiceCopyProtocol, SCNetworkProtocolGetConfiguration, SCDynamicStoreCopyValue, SCPreferencesCreate, SCNetworkServiceCopyAll, SCNetworkServiceGetInterface, SCNetworkInterfaceGetBSDName, SCDynamicStoreSetNotificationKeys, SCDynamicStoreCreateRunLoopSource, SCDynamicStoreCopyProxies, SCNetworkServiceGetName
-import  commands, re
+from Foundation import NSLog, kCFRunLoopCommonModes, kCFAllocatorDefault, CFDictionaryGetValue, CFRunLoopAddSource
+from AppKit import NSObject, NSImage, NSStatusBar, NSVariableStatusItemLength, NSMenu, NSMenuItem, NSRunLoop, NSOnState, NSApp, NSLog, NSOffState, NSApplication
+from SystemConfiguration import kSCNetworkProtocolTypeProxies, kSCPropNetProxiesFTPEnable, kSCPropNetProxiesHTTPEnable, kSCPropNetProxiesHTTPSEnable, kSCPropNetProxiesRTSPEnable, kSCPropNetProxiesSOCKSEnable, kSCPropNetProxiesFTPProxy, kSCPropNetProxiesHTTPProxy, kSCPropNetProxiesHTTPSProxy, kSCPropNetProxiesRTSPProxy, kSCPropNetProxiesSOCKSProxy, kSCPropNetProxiesFTPPort, \
+    kSCPropNetProxiesHTTPPort, kSCPropNetProxiesHTTPSPort, kSCPropNetProxiesRTSPPort, kSCPropNetProxiesSOCKSPort, kSCNetworkProtocolTypeProxies
+from SystemConfiguration import SCDynamicStoreCreate, SCNetworkServiceCopyProtocol, SCNetworkProtocolGetConfiguration, SCDynamicStoreCopyValue, SCPreferencesCreate, SCNetworkServiceCopyAll, SCNetworkServiceGetInterface, SCNetworkInterfaceGetBSDName, SCDynamicStoreSetNotificationKeys, SCDynamicStoreCreateRunLoopSource, SCDynamicStoreCopyProxies, SCNetworkServiceGetName
+import commands, re
+
 
 class ToggleProxy(NSObject):
-
     # This is a dictionary of the proxy-types we support, each with a
     # dictionary of some unique attributes for each, namely:
     #
-    #   'pref'          : This is a constant defining which preference itemmarks if this proxy is enabled
+    # 'prefEnable'    : This is a constant defining which preference item marks if this proxy is enabled
+    # 'prefProxy'     : This is a constant defining which preference item holds the proxy host
+    #   'prefPort'      : This is a constant defining which preference item holds the proxy port
     #   'title'         : This is what will appear in the menu
     #   'action'        : This is the method that will be called if the user toggles this proxies menuitem
-    #   'keyEquivalent' : Self-explanatory, but unused
+    #   'keyEquivalent' : Self-explanatory
     #   'menuitem'      : This will store the menu item for this proxy once it is created
+    #   'envVariable'   : Environment variable to set with system proxy settings, if needed
 
-    proxies = {
-        'ftp'  : { 'pref': kSCPropNetProxiesFTPEnable,   'title': 'FTP Proxy',   'action': 'toggleFtpProxy:',   'keyEquivalent': "", 'menuitem': None },
-        'http' : { 'pref': kSCPropNetProxiesHTTPEnable,  'title': 'HTTP Proxy',  'action': 'toggleHttpProxy:',  'keyEquivalent': "", 'menuitem': None },
-        'https': { 'pref': kSCPropNetProxiesHTTPSEnable, 'title': 'HTTPS Proxy', 'action': 'toggleHttpsProxy:', 'keyEquivalent': "", 'menuitem': None },
-        'rtsp' : { 'pref': kSCPropNetProxiesRTSPEnable,  'title': 'RTSP Proxy',  'action': 'toggleRtspProxy:',  'keyEquivalent': "", 'menuitem': None },
-        'socks': { 'pref': kSCPropNetProxiesSOCKSEnable, 'title': 'SOCKS Proxy', 'action': 'toggleSocksProxy:', 'keyEquivalent': "", 'menuitem': None },
+    proxyTypes = {
+        'http': {'prefEnable': kSCPropNetProxiesHTTPEnable,
+                 'prefProxy': kSCPropNetProxiesHTTPProxy,
+                 'prefPort': kSCPropNetProxiesHTTPPort,
+                 'title': 'HTTP Proxy',
+                 'action': 'toggleHttpProxy:',
+                 'keyEquivalent': "",
+                 'menuitem': None,
+                 'envVariable': {"http_proxy", "HTTP_PROXY"}},
+        'https': {'prefEnable': kSCPropNetProxiesHTTPSEnable,
+                  'prefProxy': kSCPropNetProxiesHTTPSProxy,
+                  'prefPort': kSCPropNetProxiesHTTPSPort,
+                  'title': 'HTTPS Proxy', 'action': 'toggleHttpsProxy:',
+                  'keyEquivalent': "",
+                  'menuitem': None,
+                  'envVariable': {"https_proxy", "HTTPS_PROXY"}},
+        'ftp': {'prefEnable': kSCPropNetProxiesFTPEnable,
+                'prefProxy': kSCPropNetProxiesFTPProxy,
+                'prefPort': kSCPropNetProxiesFTPPort,
+                'title': 'FTP Proxy',
+                'action': 'toggleFtpProxy:',
+                'keyEquivalent': "",
+                'menuitem': None,
+                'envVariable': {"ftp_proxy", "FTP_PROXY"}},
+        'rtsp': {'prefEnable': kSCPropNetProxiesRTSPEnable,
+                 'prefProxy': kSCPropNetProxiesRTSPProxy,
+                 'prefPort': kSCPropNetProxiesRTSPPort,
+                 'title': 'RTSP Proxy',
+                 'action': 'toggleRtspProxy:',
+                 'keyEquivalent': "",
+                 'menuitem': None,
+                 'envVariable': None},
+        'socks': {'prefEnable': kSCPropNetProxiesSOCKSEnable,
+                  'prefProxy': kSCPropNetProxiesSOCKSProxy,
+                  'prefPort': kSCPropNetProxiesSOCKSPort,
+                  'title': 'SOCKS Proxy',
+                  'action': 'toggleSocksProxy:',
+                  'keyEquivalent': "",
+                  'menuitem': None,
+                  'envVariable': None},
     }
 
     def applicationDidFinishLaunching_(self, notification):
         # load icon files
-        self.active_image   = NSImage.imageNamed_("active")
-        self.inactive_image = NSImage.imageNamed_("inactive")
+        self.active_image = NSImage.imageNamed_("StatusBarImage")
+        self.inactive_image = NSImage.imageNamed_("StatusBarImage-inactive")
+        self.no_network_image = NSImage.imageNamed_("StatusBarImage-noNetwork")
+        self.active_image.setTemplate_(True)
+        self.inactive_image.setTemplate_(True)
+        self.no_network_image.setTemplate_(True)
 
         # make status bar item
         self.statusitem = NSStatusBar.systemStatusBar().statusItemWithLength_(NSVariableStatusItemLength)
@@ -42,38 +84,16 @@ class ToggleProxy(NSObject):
 
         # open connection to the dynamic (configuration) store
         self.store = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.dynamicStoreCallback, None)
+        self.prefDict = SCNetworkProtocolGetConfiguration(SCNetworkServiceCopyProtocol(self.service, kSCNetworkProtocolTypeProxies))
+        self.constructMenu()
 
-        proxyRef = SCNetworkServiceCopyProtocol(self.service, kSCNetworkProtocolTypeProxies)
-        prefDict = SCNetworkProtocolGetConfiguration(proxyRef)
+        self.watchForProxyOrIpChanges()
+        self.updateUI()
+        self.setEnvVariables()
 
-        separatorRequired = False
-
-        # For each of the proxies we are concerned with, check to see if any
-        # are configured. If so (even if not enabled), create a menuitem for
-        # that proxy type.
-
-        for proxy in self.proxies.values():
-            enabled = CFDictionaryGetValue(prefDict, proxy['pref'])
-            if enabled is not None:
-                proxy['menuitem'] = self.menu.addItemWithTitle_action_keyEquivalent_(
-                    proxy['title'],
-                    proxy['action'],
-                    proxy['keyEquivalent']
-                )
-                separatorRequired = True
-            else:
-                proxy['menuitem'] = None
-
-        if separatorRequired:
-            self.menu.addItem_(NSMenuItem.separatorItem())
-
-        # Need a way to quit
-        self.menu.addItemWithTitle_action_keyEquivalent_("Quit", "quitApp:", "")
-
-        # Start working
-        # self.loadNetworkServices()
-        self.watchForProxyChanges()
-        self.updateProxyStatus()
+    @property
+    def is_ip_assigned(self):
+        return SCDynamicStoreCopyValue(self.store, 'State:/Network/Global/IPv4') is not None
 
     @property
     def interface(self):
@@ -92,56 +112,123 @@ class ToggleProxy(NSObject):
                 return serviceRef
         return None
 
-    def watchForProxyChanges(self):
-        """ install a watcher for proxy changes """
-        SCDynamicStoreSetNotificationKeys(self.store, None, [ 'State:/Network/Global/Proxies' ])
+    def constructMenu(self):
+        self.menu.removeAllItems()
 
-        source  = SCDynamicStoreCreateRunLoopSource(None, self.store, 0)
-        loop    = NSRunLoop.currentRunLoop().getCFRunLoop()
+        separator_required = False
+        if self.is_ip_assigned:
+            # For each of the proxyTypes we are concerned with, check to see if any
+            # are configured. If so (even if not enabled), create a menuitem for
+            # that proxy type.
+            for proxy in self.proxyTypes.values():
+                enabled = CFDictionaryGetValue(self.prefDict, proxy['prefEnable'])
+                if enabled is not None:
+                    proxy['menuitem'] = self.menu.addItemWithTitle_action_keyEquivalent_(
+                        proxy['title'],
+                        proxy['action'],
+                        proxy['keyEquivalent']
+                    )
+                    separator_required = True
+                else:
+                    proxy['menuitem'] = None
+        else:
+            self.menu.addItemWithTitle_action_keyEquivalent_("No connection - Please connect to any network before using this tool", None, "")
+
+        if separator_required:
+            self.menu.addItem_(NSMenuItem.separatorItem())
+
+         # Need a way to quit
+        self.menu.addItemWithTitle_action_keyEquivalent_("Quit", "quitApp:", "q")
+
+
+    def watchForProxyOrIpChanges(self):
+        """ install a watcher for proxy and Ip changes """
+        SCDynamicStoreSetNotificationKeys(self.store, None, ['State:/Network/Global/Proxies', 'State:/Network/Global/IPv4'])
+        source = SCDynamicStoreCreateRunLoopSource(None, self.store, 0)
+        loop = NSRunLoop.currentRunLoop().getCFRunLoop()
         CFRunLoopAddSource(loop, source, kCFRunLoopCommonModes)
 
     def dynamicStoreCallback(self, store, keys, info):
         """ callback for watcher """
-        self.updateProxyStatus()
+        NSLog("Proxy or IP change detected")
+        #for key in keys:
+        #    NSLog("Here is the change key %s value %s" % (key,SCDynamicStoreCopyValue(store, key))) #            NSLog("Here is the change key %s value s") % (key) #
 
-    def updateProxyStatus(self):
-        """ update proxy status """
-        # load proxy dictionary
-        proxydict = SCDynamicStoreCopyProxies(None)
+        if SCDynamicStoreCopyValue(store, 'State:/Network/Global/IPv4') is None:
+            NSLog("scope is null")
+        else:
+            NSLog("scope is not null")
 
-        # get status for primary interface
-        status    = proxydict['__SCOPED__'][self.interface]
+        if self.is_ip_assigned:
+            NSLog("apparently an ip is assigned")
 
-        # Are any proxies active now?
-        anyProxyEnabled = False
+        # could be an interface change, we have to rebuild menu from scratch in case the proxy configuration is different
+        self.constructMenu()
+        self.updateUI()
+        self.setEnvVariables()
 
-        # update menu items according to their related proxy state
-        for proxy in self.proxies.values():
-            if proxy['menuitem']:
-                proxy['menuitem'].setState_(status.get(proxy['pref'], False) and NSOnState or NSOffState)
-                if status.get(proxy['pref'], False):
-                    anyProxyEnabled = True
+    def updateUI(self):
+        if self.is_ip_assigned:
+            NSLog("Update proxy status on menu items")
+            # load proxy dictionary
+            proxydict = SCDynamicStoreCopyProxies(None)
 
-        # set image
-        self.statusitem.setImage_(anyProxyEnabled and self.active_image or self.inactive_image)
+            # get status for primary interface
+            status = proxydict['__SCOPED__'][self.interface]
+
+            # Are any proxies active now?
+            anyProxyEnabled = False
+
+            # update menu items according to their related proxy state
+            for proxy in self.proxyTypes.values():
+                if proxy['menuitem']:
+                    proxy['menuitem'].setState_(status.get(proxy['prefEnable'], False) and NSOnState or NSOffState)
+                    if status.get(proxy['prefEnable'], False):
+                        anyProxyEnabled = True
+
+            # set image
+            self.statusitem.setImage_(anyProxyEnabled and self.active_image or self.inactive_image)
+        else:
+            self.statusitem.setImage_(self.no_network_image)
+
+    def setEnvVariables(self):
+        if self.is_ip_assigned:
+            NSLog("Setting env var according to system settings")
+            # load proxy dictionary
+            proxydict = SCDynamicStoreCopyProxies(None)
+            # get status for primary interface
+            status = proxydict['__SCOPED__'][self.interface]
+            # update menu items according to their related proxy state
+            for proxy in self.proxyTypes.values():
+                if proxy['menuitem'] and proxy['envVariable']:
+                    if status.get(proxy['prefEnable'], False):
+                        for envvar in proxy['envVariable']:
+                            self.executeCommand("launchctl setenv %s '%s'" % (envvar, CFDictionaryGetValue(self.prefDict, proxy['prefProxy']) + ":" + str(CFDictionaryGetValue(self.prefDict, proxy['prefPort']))))
+                    else:
+                        for envvar in proxy['envVariable']:
+                            self.executeCommand("launchctl unsetenv %s" % envvar)
 
     def quitApp_(self, sender):
         NSApp.terminate_(self)
 
     def toggleFtpProxy_(self, sender):
-        self.toggleProxy(self.proxies['ftp']['menuitem'], 'ftpproxy')
+        self.toggleProxy(self.proxyTypes['ftp']['menuitem'], 'ftpproxy')
 
     def toggleHttpProxy_(self, sender):
-        self.toggleProxy(self.proxies['http']['menuitem'], 'webproxy')
+        self.toggleProxy(self.proxyTypes['http']['menuitem'], 'webproxy')
 
     def toggleHttpsProxy_(self, sender):
-        self.toggleProxy(self.proxies['https']['menuitem'], 'securewebproxy')
+        self.toggleProxy(self.proxyTypes['https']['menuitem'], 'securewebproxy')
 
     def toggleRtspProxy_(self, sender):
-        self.toggleProxy(self.proxies['rtsp']['menuitem'], 'streamingproxy')
+        self.toggleProxy(self.proxyTypes['rtsp']['menuitem'], 'streamingproxy')
 
     def toggleSocksProxy_(self, sender):
-        self.toggleProxy(self.proxies['socks']['menuitem'], 'socksfirewallproxy')
+        self.toggleProxy(self.proxyTypes['socks']['menuitem'], 'socksfirewallproxy')
+
+    def executeCommand(self, command):
+        NSLog("[Exec Command] %s" % command)
+        commands.getoutput(command)
 
     def toggleProxy(self, item, target):
         """ callback for clicks on menu item """
@@ -150,15 +237,21 @@ class ToggleProxy(NSObject):
             NSLog("interface '%s' not found in services?" % self.interface)
             return
         newstate = item.state() == NSOffState and 'on' or 'off'
-        commands.getoutput("/usr/sbin/networksetup -set%sstate '%s' %s" % (
+        self.executeCommand("/usr/sbin/networksetup -set%sstate '%s' %s" % (
             target,
             servicename,
             newstate
         ))
-        self.updateProxyStatus()
+
+        # sometimes the UI will be updated to fast if we don't wait a little (resulting in wrongly enabled proxies in the menu)
+        self.executeCommand("sleep 1")
+        self.updateUI()
+        self.setEnvVariables()
+
+
 
 if __name__ == '__main__':
-    sharedapp   = NSApplication.sharedApplication()
-    toggler     = ToggleProxy.alloc().init()
+    sharedapp = NSApplication.sharedApplication()
+    toggler = ToggleProxy.alloc().init()
     sharedapp.setDelegate_(toggler)
     sharedapp.run()
