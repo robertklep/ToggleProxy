@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from Foundation import NSLog, kCFRunLoopCommonModes, kCFAllocatorDefault, CFDictionaryGetValue, CFRunLoopAddSource
+from Foundation import NSLog, kCFRunLoopCommonModes, kCFAllocatorDefault, CFDictionaryGetValue, CFRunLoopAddSource,  NSUserDefaults
 from AppKit import NSObject, NSImage, NSStatusBar, NSVariableStatusItemLength, NSMenu, NSMenuItem, NSRunLoop, NSOnState, NSApp, NSLog, NSOffState, NSApplication
 from SystemConfiguration import kSCNetworkProtocolTypeProxies, kSCPropNetProxiesFTPEnable, kSCPropNetProxiesHTTPEnable, kSCPropNetProxiesHTTPSEnable, kSCPropNetProxiesRTSPEnable, kSCPropNetProxiesSOCKSEnable, kSCPropNetProxiesFTPProxy, kSCPropNetProxiesHTTPProxy, kSCPropNetProxiesHTTPSProxy, kSCPropNetProxiesRTSPProxy, kSCPropNetProxiesSOCKSProxy, kSCPropNetProxiesFTPPort, \
     kSCPropNetProxiesHTTPPort, kSCPropNetProxiesHTTPSPort, kSCPropNetProxiesRTSPPort, kSCPropNetProxiesSOCKSPort, kSCNetworkProtocolTypeProxies
@@ -62,8 +62,15 @@ class ToggleProxy(NSObject):
                   'menuitem': None,
                   'envVariable': None},
     }
+    
+    def log(self,content):
+        if(self.shouldLog):
+            NSLog(content);
 
     def applicationDidFinishLaunching_(self, notification):
+        #activate logging with ToggleProxy -logging 1 
+        self.shouldLog = NSUserDefaults.standardUserDefaults().boolForKey_("logging")
+        
         # load icon files
         self.active_image = NSImage.imageNamed_("StatusBarImage")
         self.inactive_image = NSImage.imageNamed_("StatusBarImage-inactive")
@@ -90,6 +97,10 @@ class ToggleProxy(NSObject):
         self.watchForProxyOrIpChanges()
         self.updateUI()
         self.setEnvVariables()
+
+
+
+
 
     @property
     def is_ip_assigned(self):
@@ -150,17 +161,7 @@ class ToggleProxy(NSObject):
 
     def dynamicStoreCallback(self, store, keys, info):
         """ callback for watcher """
-        NSLog("Proxy or IP change detected")
-        #for key in keys:
-        #    NSLog("Here is the change key %s value %s" % (key,SCDynamicStoreCopyValue(store, key))) #            NSLog("Here is the change key %s value s") % (key) #
-
-        if SCDynamicStoreCopyValue(store, 'State:/Network/Global/IPv4') is None:
-            NSLog("scope is null")
-        else:
-            NSLog("scope is not null")
-
-        if self.is_ip_assigned:
-            NSLog("apparently an ip is assigned")
+        self.log("Proxy or IP change detected")
 
         # could be an interface change, we have to rebuild menu from scratch in case the proxy configuration is different
         self.constructMenu()
@@ -169,7 +170,7 @@ class ToggleProxy(NSObject):
 
     def updateUI(self):
         if self.is_ip_assigned:
-            NSLog("Update proxy status on menu items")
+            self.log("Update proxy status on menu items")
             # load proxy dictionary
             proxydict = SCDynamicStoreCopyProxies(None)
 
@@ -193,7 +194,7 @@ class ToggleProxy(NSObject):
 
     def setEnvVariables(self):
         if self.is_ip_assigned:
-            NSLog("Setting env var according to system settings")
+            self.log("Setting env var according to system settings")
             # load proxy dictionary
             proxydict = SCDynamicStoreCopyProxies(None)
             # get status for primary interface
@@ -227,14 +228,14 @@ class ToggleProxy(NSObject):
         self.toggleProxy(self.proxyTypes['socks']['menuitem'], 'socksfirewallproxy')
 
     def executeCommand(self, command):
-        NSLog("[Exec Command] %s" % command)
+        self.log("[Exec Command] %s" % command)
         commands.getoutput(command)
 
     def toggleProxy(self, item, target):
         """ callback for clicks on menu item """
         servicename = SCNetworkServiceGetName(self.service)
         if not servicename:
-            NSLog("interface '%s' not found in services?" % self.interface)
+            self.log("interface '%s' not found in services?" % self.interface)
             return
         newstate = item.state() == NSOffState and 'on' or 'off'
         self.executeCommand("/usr/sbin/networksetup -set%sstate '%s' %s" % (
