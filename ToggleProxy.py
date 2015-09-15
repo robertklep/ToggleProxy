@@ -62,15 +62,16 @@ class ToggleProxy(NSObject):
                   'menuitem': None,
                   'envVariable': None},
     }
-    
+
     def log(self,content):
         if(self.shouldLog):
             NSLog(content);
 
     def applicationDidFinishLaunching_(self, notification):
-        #activate logging with ToggleProxy -logging 1 
+        # Toggle logging from Terminal:
+        # $ defaults write name.klep.toggleproxy logging -bool YES/NO
         self.shouldLog = NSUserDefaults.standardUserDefaults().boolForKey_("logging")
-        
+
         # load icon files
         self.active_image = NSImage.imageNamed_("StatusBarImage")
         self.inactive_image = NSImage.imageNamed_("StatusBarImage-inactive")

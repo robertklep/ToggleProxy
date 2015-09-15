@@ -7,7 +7,8 @@ setup(
     data_files  = glob('resources/*.png'),
     options     = dict(py2app = dict(
         plist   = dict(
-            LSBackgroundOnly = True
+            CFBundleIdentifier = 'name.klep.toggleproxy',
+            LSBackgroundOnly   = True,
         )
     ))
 )
