@@ -45,6 +45,24 @@ this from the same directory as `setup.py`:
 This should output any errors to stdout, so you might get a clue as to why
 it's not working. If it warrants an issue report, you're welcome!
 
+## Environment
+
+_ToggleProxy_ will call `launchctl` to set various environment variables to point to the current proxy value:
+
+- `http_proxy/HTTP_PROXY`
+- `https_proxy/HTTPS_PROXY`
+- `ftp_proxy/FTP_PROXY`
+
+To retrieve the current value, you can call this command (from the commandline, or a shell script):
+
+    launchctl getenv http_proxy
+
+## Authors / Contributors
+
+- @robertklep
+- @arnaudruffin
+- @mkoistinen
+
 ## Author & License
 
 Copyright (C) 2011-2013 by Robert Klep (_robert AT klep DOT name_).
