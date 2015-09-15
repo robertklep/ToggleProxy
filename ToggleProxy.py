@@ -7,19 +7,18 @@ from SystemConfiguration import kSCNetworkProtocolTypeProxies, kSCPropNetProxies
 from SystemConfiguration import SCDynamicStoreCreate, SCNetworkServiceCopyProtocol, SCNetworkProtocolGetConfiguration, SCDynamicStoreCopyValue, SCPreferencesCreate, SCNetworkServiceCopyAll, SCNetworkServiceGetInterface, SCNetworkInterfaceGetBSDName, SCDynamicStoreSetNotificationKeys, SCDynamicStoreCreateRunLoopSource, SCDynamicStoreCopyProxies, SCNetworkServiceGetName
 import commands, re
 
-
 class ToggleProxy(NSObject):
     # This is a dictionary of the proxy-types we support, each with a
     # dictionary of some unique attributes for each, namely:
     #
     # 'prefEnable'    : This is a constant defining which preference item marks if this proxy is enabled
     # 'prefProxy'     : This is a constant defining which preference item holds the proxy host
-    #   'prefPort'      : This is a constant defining which preference item holds the proxy port
-    #   'title'         : This is what will appear in the menu
-    #   'action'        : This is the method that will be called if the user toggles this proxies menuitem
-    #   'keyEquivalent' : Self-explanatory
-    #   'menuitem'      : This will store the menu item for this proxy once it is created
-    #   'envVariable'   : Environment variable to set with system proxy settings, if needed
+    # 'prefPort'      : This is a constant defining which preference item holds the proxy port
+    # 'title'         : This is what will appear in the menu
+    # 'action'        : This is the method that will be called if the user toggles this proxies menuitem
+    # 'keyEquivalent' : Self-explanatory
+    # 'menuitem'      : This will store the menu item for this proxy once it is created
+    # 'envVariable'   : Environment variable to set with system proxy settings, if needed
 
     proxyTypes = {
         'http': {'prefEnable': kSCPropNetProxiesHTTPEnable,
@@ -63,18 +62,16 @@ class ToggleProxy(NSObject):
                   'envVariable': None},
     }
 
-    def log(self,content):
-        if(self.shouldLog):
-            NSLog(content);
-
-    def applicationDidFinishLaunching_(self, notification):
+    def log(self, content):
         # Toggle logging from Terminal:
         # $ defaults write name.klep.toggleproxy logging -bool YES/NO
-        self.shouldLog = NSUserDefaults.standardUserDefaults().boolForKey_("logging")
+        if NSUserDefaults.standardUserDefaults().boolForKey_("logging"):
+            NSLog(content)
 
+    def applicationDidFinishLaunching_(self, notification):
         # load icon files
-        self.active_image = NSImage.imageNamed_("StatusBarImage")
-        self.inactive_image = NSImage.imageNamed_("StatusBarImage-inactive")
+        self.active_image     = NSImage.imageNamed_("StatusBarImage")
+        self.inactive_image   = NSImage.imageNamed_("StatusBarImage-inactive")
         self.no_network_image = NSImage.imageNamed_("StatusBarImage-noNetwork")
         self.active_image.setTemplate_(True)
         self.inactive_image.setTemplate_(True)
@@ -91,17 +88,13 @@ class ToggleProxy(NSObject):
         self.statusitem.setMenu_(self.menu)
 
         # open connection to the dynamic (configuration) store
-        self.store = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.dynamicStoreCallback, None)
+        self.store    = SCDynamicStoreCreate(None, "name.klep.toggleproxy", self.dynamicStoreCallback, None)
         self.prefDict = SCNetworkProtocolGetConfiguration(SCNetworkServiceCopyProtocol(self.service, kSCNetworkProtocolTypeProxies))
         self.constructMenu()
 
         self.watchForProxyOrIpChanges()
         self.updateUI()
         self.setEnvVariables()
-
-
-
-
 
     @property
     def is_ip_assigned(self):
@@ -157,7 +150,7 @@ class ToggleProxy(NSObject):
         """ install a watcher for proxy and Ip changes """
         SCDynamicStoreSetNotificationKeys(self.store, None, ['State:/Network/Global/Proxies', 'State:/Network/Global/IPv4'])
         source = SCDynamicStoreCreateRunLoopSource(None, self.store, 0)
-        loop = NSRunLoop.currentRunLoop().getCFRunLoop()
+        loop   = NSRunLoop.currentRunLoop().getCFRunLoop()
         CFRunLoopAddSource(loop, source, kCFRunLoopCommonModes)
 
     def dynamicStoreCallback(self, store, keys, info):
@@ -205,7 +198,7 @@ class ToggleProxy(NSObject):
                 if proxy['menuitem'] and proxy['envVariable']:
                     if status.get(proxy['prefEnable'], False):
                         for envvar in proxy['envVariable']:
-                            self.executeCommand("launchctl setenv %s '%s'" % (envvar, "http://"+CFDictionaryGetValue(self.prefDict, proxy['prefProxy']) + ":" + str(CFDictionaryGetValue(self.prefDict, proxy['prefPort']))))
+                            self.executeCommand("launchctl setenv %s '%s'" % (envvar, "http://" + CFDictionaryGetValue(self.prefDict, proxy['prefProxy']) + ":" + str(CFDictionaryGetValue(self.prefDict, proxy['prefPort']))))
                     else:
                         for envvar in proxy['envVariable']:
                             self.executeCommand("launchctl unsetenv %s" % envvar)
@@ -238,19 +231,20 @@ class ToggleProxy(NSObject):
         if not servicename:
             self.log("interface '%s' not found in services?" % self.interface)
             return
+
         newstate = item.state() == NSOffState and 'on' or 'off'
-        self.executeCommand("/usr/sbin/networksetup -set%sstate '%s' %s" % (
+
+        # Sometimes the UI will be updated too fast if we don't wait a little
+        # (resulting in wrongly enabled proxies in the menu), so after changing
+        # the interface state we wait a bit (this is easier than doing a sleep
+        # in code, as that has to be scheduled on the run loop)
+        self.executeCommand("/usr/sbin/networksetup -set%sstate '%s' %s; sleep 1" % (
             target,
             servicename,
             newstate
         ))
-
-        # sometimes the UI will be updated to fast if we don't wait a little (resulting in wrongly enabled proxies in the menu)
-        self.executeCommand("sleep 1")
         self.updateUI()
         self.setEnvVariables()
-
-
 
 if __name__ == '__main__':
     sharedapp = NSApplication.sharedApplication()
