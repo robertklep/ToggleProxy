@@ -203,7 +203,7 @@ class ToggleProxy(NSObject):
                 if proxy['menuitem'] and proxy['envVariable']:
                     if status.get(proxy['prefEnable'], False):
                         for envvar in proxy['envVariable']:
-                            self.executeCommand("launchctl setenv %s '%s'" % (envvar, CFDictionaryGetValue(self.prefDict, proxy['prefProxy']) + ":" + str(CFDictionaryGetValue(self.prefDict, proxy['prefPort']))))
+                            self.executeCommand("launchctl setenv %s '%s'" % (envvar, "http://"+CFDictionaryGetValue(self.prefDict, proxy['prefProxy']) + ":" + str(CFDictionaryGetValue(self.prefDict, proxy['prefPort']))))
                     else:
                         for envvar in proxy['envVariable']:
                             self.executeCommand("launchctl unsetenv %s" % envvar)
